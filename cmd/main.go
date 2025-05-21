@@ -7,49 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sbeverly/blog/cmd/pages"
+	"github.com/sbeverly/blog/cmd/posts"
 )
 
-// Post represents the data for a single post page.
-type Post struct {
+// RenderItem represents common data structure for rendering any content (post or page).
+type RenderItem struct {
 	Title       string
 	ContentHTML template.HTML
 	Slug        string
-}
-
-// loadPosts reads all .html files from the contentDir, parses them into Post objects.
-func loadPosts(contentDir string) ([]Post, error) {
-	var loadedPosts []Post
-	files, err := os.ReadDir(contentDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read content directory %s: %w", contentDir, err)
-	}
-
-	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".html") {
-			filePath := filepath.Join(contentDir, file.Name())
-			contentBytes, err := os.ReadFile(filePath)
-			if err != nil {
-				fmt.Printf("Warning: Failed to read file %s: %v\n", filePath, err)
-				continue // Skip this file
-			}
-
-			baseName := strings.TrimSuffix(file.Name(), ".html")
-			slug := "/" + baseName
-			// Derive title from slug (e.g., "/my-post" -> "My Post")
-			title := strings.ReplaceAll(strings.TrimPrefix(slug, "/"), "-", " ")
-			title = strings.Title(title) //nolint:staticcheck // SA1019: strings.Title is deprecated, but good enough for this example
-			if title == "" {
-				title = "Untitled Post" // Fallback
-			}
-
-			loadedPosts = append(loadedPosts, Post{
-				Title:       title,
-				ContentHTML: template.HTML(contentBytes),
-				Slug:        slug,
-			})
-		}
-	}
-	return loadedPosts, nil
 }
 
 func main() {
@@ -62,31 +29,45 @@ func main() {
 		panic(fmt.Sprintf("Failed to create output directory %s: %v", outputDir, err))
 	}
 
-	var allPosts []Post
+	var allRenderItems []RenderItem
 
-	postsPath := filepath.Join(contentDir, "posts")
-	if _, err := os.Stat(postsPath); !os.IsNotExist(err) {
-		postsContent, err := loadPosts(postsPath)
+	// Load Posts
+	postsContentPath := filepath.Join(contentDir, "posts")
+	if _, err := os.Stat(postsContentPath); !os.IsNotExist(err) {
+		loadedPosts, err := posts.Load(postsContentPath)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to load posts from %s: %v", postsPath, err))
+			panic(fmt.Sprintf("Failed to load posts from %s: %v", postsContentPath, err))
 		}
-		allPosts = append(allPosts, postsContent...)
+		for _, p := range loadedPosts {
+			allRenderItems = append(allRenderItems, RenderItem{
+				Title:       p.Title,
+				ContentHTML: p.ContentHTML,
+				Slug:        p.Slug,
+			})
+		}
 	} else {
-		fmt.Printf("Posts directory not found, skipping: %s\n", postsPath)
+		fmt.Printf("Posts directory not found, skipping: %s\n", postsContentPath)
 	}
 
-	pagesPath := filepath.Join(contentDir, "pages")
-	if _, err := os.Stat(pagesPath); !os.IsNotExist(err) {
-		pagesContent, err := loadPosts(pagesPath)
+	// Load Pages
+	pagesContentPath := filepath.Join(contentDir, "pages")
+	if _, err := os.Stat(pagesContentPath); !os.IsNotExist(err) {
+		loadedPages, err := pages.Load(pagesContentPath)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to load pages from %s: %v", pagesPath, err))
+			panic(fmt.Sprintf("Failed to load pages from %s: %v", pagesContentPath, err))
 		}
-		allPosts = append(allPosts, pagesContent...)
+		for _, p := range loadedPages {
+			allRenderItems = append(allRenderItems, RenderItem{
+				Title:       p.Title,
+				ContentHTML: p.ContentHTML,
+				Slug:        p.Slug,
+			})
+		}
 	} else {
-		fmt.Printf("Pages directory not found, skipping: %s\n", pagesPath)
+		fmt.Printf("Pages directory not found, skipping: %s\n", pagesContentPath)
 	}
 
-	if len(allPosts) == 0 {
+	if len(allRenderItems) == 0 {
 		fmt.Println("No content found in 'content/posts' or 'content/pages' directories.")
 	}
 
@@ -100,9 +81,9 @@ func main() {
 		panic(fmt.Sprintf("Failed to parse templates: %v", err))
 	}
 
-	for _, postData := range allPosts {
-		fileName := strings.TrimPrefix(postData.Slug, "/") + ".html"
-		if postData.Slug == "/" {
+	for _, itemData := range allRenderItems {
+		fileName := strings.TrimPrefix(itemData.Slug, "/") + ".html"
+		if itemData.Slug == "/" { // This case might need review based on how slugs like "/" are generated
 			fileName = "index.html"
 		}
 		filePath := filepath.Join(outputDir, fileName)
@@ -115,7 +96,7 @@ func main() {
 
 		// defer file.Close() // Closed explicitly below to catch errors sooner in loop
 
-		executeErr := templates.ExecuteTemplate(file, "base", postData)
+		executeErr := templates.ExecuteTemplate(file, "base", itemData)
 		closeErr := file.Close()
 
 		if executeErr != nil {
