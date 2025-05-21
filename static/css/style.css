@@ -1,0 +1,76 @@
+/* Basic styles for light and dark mode */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+    color: #333; /* Default light mode text color */
+    background-color: #f4f4f4; /* Default light mode background */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    background: #333;
+    color: #fff;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+}
+
+header nav a {
+    color: #fff;
+    margin: 0 10px;
+    text-decoration: none;
+}
+
+header nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    margin-top: 20px;
+}
+
+article {
+    background: #fff; /* Light mode article background */
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ccc; /* Light mode footer border */
+    font-size: 0.9em;
+}
+
+/* Dark Mode Styles */
+@media (prefers-color-scheme: dark) {
+    body {
+        color: #f4f4f4; /* Dark mode text color */
+        background-color: #333; /* Dark mode background */
+    }
+
+    header {
+        background: #222; /* Dark mode header background */
+        color: #f4f4f4;
+    }
+
+    header nav a {
+        color: #f4f4f4;
+    }
+
+    article {
+        background: #444; /* Dark mode article background */
+        color: #f4f4f4;
+    }
+
+    footer {
+        border-top: 1px solid #555; /* Dark mode footer border */
+    }
+}
