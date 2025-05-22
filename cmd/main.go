@@ -75,8 +75,9 @@ func main() {
 	baseTmpl := filepath.Join(tmplPath, "base.html")
 	headerTmpl := filepath.Join(tmplPath, "header.html")
 	postPageTmpl := filepath.Join(tmplPath, "post.html")
+	pageTmpl := filepath.Join(tmplPath, "page.html") // Added page.html
 
-	templates, err := template.ParseFiles(baseTmpl, headerTmpl, postPageTmpl)
+	templates, err := template.ParseFiles(baseTmpl, headerTmpl, postPageTmpl, pageTmpl) // Added pageTmpl
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse templates: %v", err))
 	}
@@ -117,15 +118,44 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", staticFs))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		diskFilePath := filepath.Join(outputDir, r.URL.Path)
+		// Construct the path in the filesystem relative to the outputDir
+		fsPath := filepath.Join(outputDir, r.URL.Path)
 
-		_, err := os.Stat(diskFilePath)
-		if os.IsNotExist(err) {
-
-			r.URL.Path = r.URL.Path + ".html"
+		// Check if the direct path exists
+		s, err := os.Stat(fsPath)
+		if err == nil {
+			// If it's a directory, http.FileServer will look for index.html within it.
+			// If it's a file, http.FileServer will serve it.
+			// This handles cases like "/" (serves public/index.html)
+			// and "/my-first-post.html" (serves the file directly).
+			if s.IsDir() && !strings.HasSuffix(r.URL.Path, "/") {
+				// For a directory accessed without a trailing slash (e.g., /foo),
+				// http.FileServer will typically issue a redirect to /foo/.
+				// This is standard behavior and generally what we want.
+			}
+			publicFs.ServeHTTP(w, r)
+			return
 		}
 
-		publicFs.ServeHTTP(w, r)
+		// If direct path doesn't exist, try with .html extension (for clean URLs like /about)
+		if os.IsNotExist(err) {
+			fsPathWithHtml := fsPath + ".html"
+			sHtml, errHtml := os.Stat(fsPathWithHtml)
+			// Ensure it's a file and not a directory
+			if errHtml == nil && (sHtml != nil && !sHtml.IsDir()) {
+				// Adjust r.URL.Path for publicFs to serve the .html file
+				r.URL.Path = r.URL.Path + ".html"
+				publicFs.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// If neither path nor path.html exists (or path.html is a dir), serve 404
+		w.WriteHeader(http.StatusNotFound)
+		// Serve the custom 404.html page
+		// Note: http.ServeFile uses the original r.URL.Path for content negotiation,
+		// but we are explicitly serving 404.html here.
+		http.ServeFile(w, r, filepath.Join(outputDir, "404.html"))
 	})
 
 	port := "8080"
