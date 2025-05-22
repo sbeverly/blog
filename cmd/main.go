@@ -10,6 +10,7 @@ import (
 
 	"github.com/sbeverly/blog/cmd/pages"
 	"github.com/sbeverly/blog/cmd/posts"
+	"github.com/sbeverly/blog/cmd/static"
 )
 
 // RenderItem represents common data structure for rendering any content (post or page).
@@ -27,6 +28,18 @@ func main() {
 
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		panic(fmt.Sprintf("Failed to create output directory %s: %v", outputDir, err))
+	}
+
+	// Copy static assets
+	sourceStaticDir := "static" // Assuming your source static files are in a directory named "static"
+	targetStaticDir := filepath.Join(outputDir, "static")
+	if _, err := os.Stat(sourceStaticDir); !os.IsNotExist(err) {
+		fmt.Printf("Copying static assets from %s to %s\n", sourceStaticDir, targetStaticDir)
+		if err := static.CopyAll(sourceStaticDir, targetStaticDir); err != nil {
+			panic(fmt.Sprintf("Failed to copy static assets: %v", err))
+		}
+	} else {
+		fmt.Printf("Source static directory %s not found, skipping static asset copy.\n", sourceStaticDir)
 	}
 
 	var allRenderItems []RenderItem
@@ -113,9 +126,8 @@ func main() {
 
 	publicFs := http.FileServer(http.Dir(outputDir))
 
-	staticDir := "static"
-	staticFs := http.FileServer(http.Dir(staticDir))
-	http.Handle("/static/", http.StripPrefix("/static/", staticFs))
+	// The http.Handle for "/static/" is no longer needed here,
+	// as publicFs will serve files from outputDir (e.g., "public/static/...").
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Construct the path in the filesystem relative to the outputDir
