@@ -151,7 +151,7 @@ func main() {
 		}
 
 		// If neither path nor path.html exists (or path.html is a dir), serve 404
-		w.WriteHeader(http.StatusNotFound)
+		// w.WriteHeader(http.StatusNotFound)
 		// Serve the custom 404.html page
 		// Note: http.ServeFile uses the original r.URL.Path for content negotiation,
 		// but we are explicitly serving 404.html here.
