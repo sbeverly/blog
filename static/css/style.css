@@ -2,14 +2,18 @@
 body {
     font-family: sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 0; /* Adjusted padding for full height flex */
     line-height: 1.6;
     color: #333; /* Default light mode text color */
     background-color: #f4f4f4; /* Default light mode background */
     transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 header {
+    padding: 1rem 20px; /* Add back padding horizontally */
     background: #333;
     color: #fff;
     padding: 1rem 0;
@@ -31,7 +35,8 @@ header nav a:hover {
 }
 
 main {
-    margin-top: 20px;
+    flex-grow: 1; /* Allows main to fill available space */
+    padding: 20px; /* Add padding here instead of body */
 }
 
 article {
@@ -43,8 +48,7 @@ article {
 
 footer {
     text-align: center;
-    margin-top: 30px;
-    padding-top: 20px;
+    padding: 20px; /* Adjusted padding */
     border-top: 1px solid #ccc; /* Light mode footer border */
     font-size: 0.9em;
 }
