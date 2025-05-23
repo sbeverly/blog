@@ -15,7 +15,15 @@
   <body>
     {{template "header" .}}
     <main>
-      {{template "post_content" .}}
+      {{if eq .Type "post"}}
+        {{template "post_content_block" .}}
+      {{else if eq .Type "page"}}
+        {{template "page_content_block" .}}
+      {{else if eq .Type "post_list"}}
+        {{template "post_list_content_block" .}}
+      {{else}}
+        <p>Error: Unknown content type '{{.Type}}' for page '{{.Title}}'</p>
+      {{end}}
     </main>
     <footer>
       <p>&copy; 2025 My Static Site</p>

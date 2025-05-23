@@ -18,6 +18,14 @@ type RenderItem struct {
 	Title       string
 	ContentHTML template.HTML
 	Slug        string
+	Type        string // "post" or "page"
+}
+
+// PostListPageData holds data for the all posts listing page.
+type PostListPageData struct {
+	Title string       // For the <title> tag of the page
+	Posts []RenderItem // List of posts to display
+	Type  string       // "post_list"
 }
 
 func main() {
@@ -43,6 +51,7 @@ func main() {
 	}
 
 	var allRenderItems []RenderItem
+	var postItemsForListPage []RenderItem
 
 	// Load Posts
 	postsContentPath := filepath.Join(contentDir, "posts")
@@ -52,11 +61,14 @@ func main() {
 			panic(fmt.Sprintf("Failed to load posts from %s: %v", postsContentPath, err))
 		}
 		for _, p := range loadedPosts {
-			allRenderItems = append(allRenderItems, RenderItem{
+			renderItem := RenderItem{
 				Title:       p.Title,
 				ContentHTML: p.ContentHTML,
 				Slug:        p.Slug,
-			})
+				Type:        "post",
+			}
+			allRenderItems = append(allRenderItems, renderItem)
+			postItemsForListPage = append(postItemsForListPage, renderItem)
 		}
 	} else {
 		fmt.Printf("Posts directory not found, skipping: %s\n", postsContentPath)
@@ -74,6 +86,7 @@ func main() {
 				Title:       p.Title,
 				ContentHTML: p.ContentHTML,
 				Slug:        p.Slug,
+				Type:        "page",
 			})
 		}
 	} else {
@@ -87,14 +100,16 @@ func main() {
 	tmplPath := "templates"
 	baseTmpl := filepath.Join(tmplPath, "base.html")
 	headerTmpl := filepath.Join(tmplPath, "header.html")
-	postPageTmpl := filepath.Join(tmplPath, "post.html")
-	pageTmpl := filepath.Join(tmplPath, "page.html") // Added page.html
+	postTmpl := filepath.Join(tmplPath, "post.html")     // Renamed for clarity, was postPageTmpl
+	pageTmpl := filepath.Join(tmplPath, "page.html")
+	postListTmpl := filepath.Join(tmplPath, "post_list.html") // New template for post list
 
-	templates, err := template.ParseFiles(baseTmpl, headerTmpl, postPageTmpl, pageTmpl) // Added pageTmpl
+	templates, err := template.ParseFiles(baseTmpl, headerTmpl, postTmpl, pageTmpl, postListTmpl)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse templates: %v", err))
 	}
 
+	// Generate individual post and page files
 	for _, itemData := range allRenderItems {
 		fileName := strings.TrimPrefix(itemData.Slug, "/") + ".html"
 		if itemData.Slug == "/" { // This case might need review based on how slugs like "/" are generated
@@ -119,6 +134,32 @@ func main() {
 			fmt.Printf("Warning: Failed to close file %s: %v\n", filePath, closeErr)
 		} else {
 			fmt.Printf("Successfully generated %s\n", filePath)
+		}
+	}
+
+	// Generate the post list page if there are posts
+	if len(postItemsForListPage) > 0 {
+		postListData := PostListPageData{
+			Title: "All Posts",
+			Posts: postItemsForListPage,
+			Type:  "post_list",
+		}
+		postListFilePath := filepath.Join(outputDir, "posts.html")
+		postListFile, createErr := os.Create(postListFilePath)
+		if createErr != nil {
+			fmt.Printf("Warning: Failed to create post list file %s: %v\n", postListFilePath, createErr)
+		} else {
+			// defer postListFile.Close() // Closed explicitly below
+			executeErr := templates.ExecuteTemplate(postListFile, "base", postListData)
+			closeErr := postListFile.Close()
+
+			if executeErr != nil {
+				fmt.Printf("Warning: Failed to execute template for %s: %v\n", postListFilePath, executeErr)
+			} else if closeErr != nil {
+				fmt.Printf("Warning: Failed to close file %s: %v\n", postListFilePath, closeErr)
+			} else {
+				fmt.Printf("Successfully generated %s\n", postListFilePath)
+			}
 		}
 	}
 
