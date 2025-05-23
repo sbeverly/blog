@@ -1,20 +1,25 @@
 {{define "base"}}
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
+    <script
+      defer
+      src="https://cloud.umami.is/script.js"
+      data-website-id="f6241341-9c87-44b7-bbc1-ff147d6720ef"
+    ></script>
+  </head>
+  <body>
     {{template "header" .}}
     <main>
-        {{template "post_content" .}}
+      {{template "post_content" .}}
     </main>
     <footer>
-        <p>&copy; 2025 My Static Site</p>
+      <p>&copy; 2025 My Static Site</p>
     </footer>
-</body>
+  </body>
 </html>
 {{end}}
