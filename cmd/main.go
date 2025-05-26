@@ -100,7 +100,7 @@ func main() {
 	tmplPath := "templates"
 	baseTmpl := filepath.Join(tmplPath, "base.html")
 	headerTmpl := filepath.Join(tmplPath, "header.html")
-	postTmpl := filepath.Join(tmplPath, "post.html")     // Renamed for clarity, was postPageTmpl
+	postTmpl := filepath.Join(tmplPath, "post.html") // Renamed for clarity, was postPageTmpl
 	pageTmpl := filepath.Join(tmplPath, "page.html")
 	postListTmpl := filepath.Join(tmplPath, "post_list.html") // New template for post list
 
