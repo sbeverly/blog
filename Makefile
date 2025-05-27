@@ -6,6 +6,6 @@ deploy-dev-blog: build-devblog
 
 # Serves the devblog site locally
 serve-devblog:
-	go run cmd/main.go serve devblog
+	air serve devblog
 
 
