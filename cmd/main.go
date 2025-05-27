@@ -29,13 +29,29 @@ type PostListPageData struct {
 }
 
 func main() {
-	fmt.Println("STARTING SITE BUILDS")
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: go run cmd/main.go <site_name>")
+		os.Exit(1)
+	}
+	targetSiteName := os.Args[1]
+	fmt.Printf("STARTING SITE BUILD FOR: %s\n", targetSiteName)
 
 	sitesRootDir := "sites" // Root directory for all sites
 
-	siteEntries, err := os.ReadDir(sitesRootDir)
+	// Use targetSiteName for the rest of the build logic
+	siteName := targetSiteName
+	siteSourceDir := filepath.Join(sitesRootDir, siteName)
+
+	// Validate the target site directory
+	siteInfo, err := os.Stat(siteSourceDir)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to read sites directory %s: %v", sitesRootDir, err))
+		if os.IsNotExist(err) {
+			panic(fmt.Sprintf("Error: Site directory '%s' does not exist.", siteSourceDir))
+		}
+		panic(fmt.Sprintf("Error: Failed to access site directory '%s': %v", siteSourceDir, err))
+	}
+	if !siteInfo.IsDir() {
+		panic(fmt.Sprintf("Error: Path '%s' is not a directory.", siteSourceDir))
 	}
 
 	tmplPath := "templates"
@@ -50,16 +66,8 @@ func main() {
 		panic(fmt.Sprintf("Failed to parse templates: %v", err))
 	}
 
-	foundSites := false
-	for _, entry := range siteEntries {
-		if !entry.IsDir() {
-			continue
-		}
-		foundSites = true
-		siteName := entry.Name()
-		fmt.Printf("BUILDING SITE: %s\n", siteName)
-
-		siteSourceDir := filepath.Join(sitesRootDir, siteName)
+	// The loop over siteEntries is removed. We are processing only siteName (targetSiteName).
+	// siteName and siteSourceDir are already set.
 		siteContentDir := filepath.Join(siteSourceDir, "content")
 		siteStaticSourceDir := filepath.Join(siteSourceDir, "static")
 		siteOutputDir := filepath.Join(siteSourceDir, "public") // Output for this site
@@ -185,50 +193,23 @@ func main() {
 				}
 			}
 		}
-		fmt.Printf("SITE BUILD COMPLETE: %s\n", siteName)
-	}
-
-	if !foundSites {
-		fmt.Printf("No sites found in %s directory.\n", sitesRootDir)
-	}
-	fmt.Println("ALL SITE BUILDS FINISHED")
+		// Build logic for the single site (siteName) has completed.
+		fmt.Printf("SITE BUILD FINISHED FOR: %s\n", siteName)
 
 	// The http.Handle for "/static/" is no longer needed here,
 	// as publicFs will serve files from outputDir (e.g., "public/static/...").
 
+	// The http.HandleFunc will now serve the single site specified by targetSiteName.
+	// targetSiteName (from CLI args) is captured by this closure.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		originalURLPath := r.URL.Path // Store for restoration
-		reqPath := originalURLPath
-		var siteName, resourcePath string
-
-		// Extract siteName and resourcePath from the URL
-		// e.g., /site1/foo/bar -> siteName="site1", resourcePath="/foo/bar"
-		// e.g., /site1 -> siteName="site1", resourcePath="/"
-		// e.g., / -> special handling or error, depends on desired behavior for root
-		trimmedPath := strings.TrimPrefix(reqPath, "/")
-		if idx := strings.Index(trimmedPath, "/"); idx != -1 {
-			siteName = trimmedPath[:idx]
-			resourcePath = "/" + trimmedPath[idx+1:]
-		} else if trimmedPath != "" { // Path is just "/sitename"
-			siteName = trimmedPath
-			resourcePath = "/" // Serve index.html from the site's root
-		} else { // Path is "/"
-			// This case needs to be decided:
-			// 1. Serve a default site?
-			// 2. Serve a landing page listing all sites?
-			// 3. Return a 404 or specific error?
-			// For now, let's assume it's an error or requires specific site in URL.
-			http.NotFound(w, r) // Or a custom "choose a site" page
-			return
-		}
 		
-		// Basic validation for siteName to prevent path traversal or invalid names
-		if siteName == "" || siteName == "." || siteName == ".." || strings.Contains(siteName, "/") {
-			 http.NotFound(w,r) // Or a more specific error
-			 return
-		}
+		// For a single-site server, the siteName is fixed (targetSiteName).
+		// The resourcePath is the path requested by the client (r.URL.Path).
+		resourcePath := r.URL.Path
 
-		sitePublicRoot := filepath.Join(sitesRootDir, siteName, "public")
+		// The siteName is fixed to targetSiteName. No need to extract or validate it from the URL.
+		sitePublicRoot := filepath.Join(sitesRootDir, targetSiteName, "public")
 
 		// Check if the site's public directory exists
 		if _, err := os.Stat(sitePublicRoot); os.IsNotExist(err) {
@@ -284,7 +265,9 @@ func main() {
 	})
 
 	port := "8080"
-	fmt.Printf("Starting server on http://localhost:%s (serving from site-specific public directories within %s)\n", port, sitesRootDir)
+	// Update server startup message to reflect single site being served
+	sitePublicDirForServer := filepath.Join(sitesRootDir, targetSiteName, "public")
+	fmt.Printf("Starting server on http://localhost:%s (serving site '%s' from %s)\n", port, targetSiteName, sitePublicDirForServer)
 	serverErr := http.ListenAndServe(":"+port, nil)
 	if serverErr != nil {
 		panic(fmt.Sprintf("Failed to start server: %v", serverErr))
