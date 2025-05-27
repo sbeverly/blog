@@ -7,7 +7,9 @@ tmp_dir = "tmp"
   bin = "./tmp/main"
   cmd = "APP_ENV=local go build -o ./tmp/main ./cmd/main.go"
   delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "public"]
+  # for some reason, defining a folder using * glob or otherwise does not stop that dir from being included. So until this is figured out I need to
+  # exclude the dir explicitly.
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "sites/devblog/public"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
