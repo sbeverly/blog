@@ -68,133 +68,133 @@ func main() {
 
 	// The loop over siteEntries is removed. We are processing only siteName (targetSiteName).
 	// siteName and siteSourceDir are already set.
-		siteContentDir := filepath.Join(siteSourceDir, "content")
-		siteStaticSourceDir := filepath.Join(siteSourceDir, "static")
-		siteOutputDir := filepath.Join(siteSourceDir, "public") // Output for this site
+	siteContentDir := filepath.Join(siteSourceDir, "content")
+	siteStaticSourceDir := filepath.Join(siteSourceDir, "static")
+	siteOutputDir := filepath.Join(siteSourceDir, "public") // Output for this site
 
-		if err := os.MkdirAll(siteOutputDir, 0755); err != nil {
-			panic(fmt.Sprintf("Failed to create output directory %s for site %s: %v", siteOutputDir, siteName, err))
+	if err := os.MkdirAll(siteOutputDir, 0755); err != nil {
+		panic(fmt.Sprintf("Failed to create output directory %s for site %s: %v", siteOutputDir, siteName, err))
+	}
+
+	// Copy static assets for the site
+	siteStaticOutputDir := filepath.Join(siteOutputDir, "static")
+	if _, err := os.Stat(siteStaticSourceDir); !os.IsNotExist(err) {
+		fmt.Printf("Copying static assets for site %s from %s to %s\n", siteName, siteStaticSourceDir, siteStaticOutputDir)
+		if err := static.CopyAll(siteStaticSourceDir, siteStaticOutputDir); err != nil {
+			panic(fmt.Sprintf("Failed to copy static assets for site %s: %v", siteName, err))
+		}
+	} else {
+		fmt.Printf("Source static directory %s for site %s not found, skipping static asset copy.\n", siteStaticSourceDir, siteName)
+	}
+
+	var allRenderItems []RenderItem
+	var postItemsForListPage []RenderItem
+
+	// Load Posts for the site
+	postsContentPath := filepath.Join(siteContentDir, "posts")
+	if _, err := os.Stat(postsContentPath); !os.IsNotExist(err) {
+		loadedPosts, err := posts.Load(postsContentPath)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load posts for site %s from %s: %v", siteName, postsContentPath, err))
+		}
+		for _, p := range loadedPosts {
+			renderItem := RenderItem{
+				Title:       p.Title,
+				ContentHTML: p.ContentHTML,
+				Slug:        p.Slug,
+				Type:        "post",
+			}
+			allRenderItems = append(allRenderItems, renderItem)
+			postItemsForListPage = append(postItemsForListPage, renderItem)
+		}
+	} else {
+		fmt.Printf("Posts directory not found for site %s, skipping: %s\n", siteName, postsContentPath)
+	}
+
+	// Load Pages for the site
+	pagesContentPath := filepath.Join(siteContentDir, "pages")
+	if _, err := os.Stat(pagesContentPath); !os.IsNotExist(err) {
+		loadedPages, err := pages.Load(pagesContentPath)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load pages for site %s from %s: %v", siteName, pagesContentPath, err))
+		}
+		for _, p := range loadedPages {
+			allRenderItems = append(allRenderItems, RenderItem{
+				Title:       p.Title,
+				ContentHTML: p.ContentHTML,
+				Slug:        p.Slug,
+				Type:        "page",
+			})
+		}
+	} else {
+		fmt.Printf("Pages directory not found for site %s, skipping: %s\n", siteName, pagesContentPath)
+	}
+
+	if len(allRenderItems) == 0 {
+		fmt.Printf("No content found in '%s' or '%s' for site %s.\n", postsContentPath, pagesContentPath, siteName)
+	}
+
+	// Generate individual post and page files for the site
+	for _, itemData := range allRenderItems {
+		fileName := strings.TrimPrefix(itemData.Slug, "/") + ".html"
+		if itemData.Slug == "/" { // This case might need review based on how slugs like "/" are generated
+			fileName = "index.html"
+		}
+		filePath := filepath.Join(siteOutputDir, fileName)
+
+		// Ensure parent directory exists for nested slugs if any
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			fmt.Printf("Warning: Failed to create directory for %s: %v\n", filePath, err)
+			continue
 		}
 
-		// Copy static assets for the site
-		siteStaticOutputDir := filepath.Join(siteOutputDir, "static")
-		if _, err := os.Stat(siteStaticSourceDir); !os.IsNotExist(err) {
-			fmt.Printf("Copying static assets for site %s from %s to %s\n", siteName, siteStaticSourceDir, siteStaticOutputDir)
-			if err := static.CopyAll(siteStaticSourceDir, siteStaticOutputDir); err != nil {
-				panic(fmt.Sprintf("Failed to copy static assets for site %s: %v", siteName, err))
-			}
+		file, err := os.Create(filePath)
+		if err != nil {
+			fmt.Printf("Warning: Failed to create file %s for site %s: %v\n", filePath, siteName, err)
+			continue
+		}
+
+		// defer file.Close() // Closed explicitly below to catch errors sooner in loop
+
+		executeErr := parsedTemplates.ExecuteTemplate(file, "base", itemData)
+		closeErr := file.Close()
+
+		if executeErr != nil {
+			fmt.Printf("Warning: Failed to execute template for %s (site %s): %v\n", filePath, siteName, executeErr)
+		} else if closeErr != nil {
+			fmt.Printf("Warning: Failed to close file %s (site %s): %v\n", filePath, siteName, closeErr)
 		} else {
-			fmt.Printf("Source static directory %s for site %s not found, skipping static asset copy.\n", siteStaticSourceDir, siteName)
+			fmt.Printf("Successfully generated %s for site %s\n", filePath, siteName)
 		}
+	}
 
-		var allRenderItems []RenderItem
-		var postItemsForListPage []RenderItem
-
-		// Load Posts for the site
-		postsContentPath := filepath.Join(siteContentDir, "posts")
-		if _, err := os.Stat(postsContentPath); !os.IsNotExist(err) {
-			loadedPosts, err := posts.Load(postsContentPath)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to load posts for site %s from %s: %v", siteName, postsContentPath, err))
-			}
-			for _, p := range loadedPosts {
-				renderItem := RenderItem{
-					Title:       p.Title,
-					ContentHTML: p.ContentHTML,
-					Slug:        p.Slug,
-					Type:        "post",
-				}
-				allRenderItems = append(allRenderItems, renderItem)
-				postItemsForListPage = append(postItemsForListPage, renderItem)
-			}
+	// Generate the post list page for the site if there are posts
+	if len(postItemsForListPage) > 0 {
+		postListData := PostListPageData{
+			Title: "All Posts",
+			Posts: postItemsForListPage,
+			Type:  "post_list",
+		}
+		postListFilePath := filepath.Join(siteOutputDir, "posts.html")
+		postListFile, createErr := os.Create(postListFilePath)
+		if createErr != nil {
+			fmt.Printf("Warning: Failed to create post list file %s for site %s: %v\n", postListFilePath, siteName, createErr)
 		} else {
-			fmt.Printf("Posts directory not found for site %s, skipping: %s\n", siteName, postsContentPath)
-		}
-
-		// Load Pages for the site
-		pagesContentPath := filepath.Join(siteContentDir, "pages")
-		if _, err := os.Stat(pagesContentPath); !os.IsNotExist(err) {
-			loadedPages, err := pages.Load(pagesContentPath)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to load pages for site %s from %s: %v", siteName, pagesContentPath, err))
-			}
-			for _, p := range loadedPages {
-				allRenderItems = append(allRenderItems, RenderItem{
-					Title:       p.Title,
-					ContentHTML: p.ContentHTML,
-					Slug:        p.Slug,
-					Type:        "page",
-				})
-			}
-		} else {
-			fmt.Printf("Pages directory not found for site %s, skipping: %s\n", siteName, pagesContentPath)
-		}
-
-		if len(allRenderItems) == 0 {
-			fmt.Printf("No content found in '%s' or '%s' for site %s.\n", postsContentPath, pagesContentPath, siteName)
-		}
-
-		// Generate individual post and page files for the site
-		for _, itemData := range allRenderItems {
-			fileName := strings.TrimPrefix(itemData.Slug, "/") + ".html"
-			if itemData.Slug == "/" { // This case might need review based on how slugs like "/" are generated
-				fileName = "index.html"
-			}
-			filePath := filepath.Join(siteOutputDir, fileName)
-
-			// Ensure parent directory exists for nested slugs if any
-			if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-				fmt.Printf("Warning: Failed to create directory for %s: %v\n", filePath, err)
-				continue
-			}
-			
-			file, err := os.Create(filePath)
-			if err != nil {
-				fmt.Printf("Warning: Failed to create file %s for site %s: %v\n", filePath, siteName, err)
-				continue
-			}
-
-			// defer file.Close() // Closed explicitly below to catch errors sooner in loop
-
-			executeErr := parsedTemplates.ExecuteTemplate(file, "base", itemData)
-			closeErr := file.Close()
+			// defer postListFile.Close() // Closed explicitly below
+			executeErr := parsedTemplates.ExecuteTemplate(postListFile, "base", postListData)
+			closeErr := postListFile.Close()
 
 			if executeErr != nil {
-				fmt.Printf("Warning: Failed to execute template for %s (site %s): %v\n", filePath, siteName, executeErr)
+				fmt.Printf("Warning: Failed to execute template for %s (site %s): %v\n", postListFilePath, siteName, executeErr)
 			} else if closeErr != nil {
-				fmt.Printf("Warning: Failed to close file %s (site %s): %v\n", filePath, siteName, closeErr)
+				fmt.Printf("Warning: Failed to close file %s (site %s): %v\n", postListFilePath, siteName, closeErr)
 			} else {
-				fmt.Printf("Successfully generated %s for site %s\n", filePath, siteName)
+				fmt.Printf("Successfully generated %s for site %s\n", postListFilePath, siteName)
 			}
 		}
-
-		// Generate the post list page for the site if there are posts
-		if len(postItemsForListPage) > 0 {
-			postListData := PostListPageData{
-				Title: "All Posts",
-				Posts: postItemsForListPage,
-				Type:  "post_list",
-			}
-			postListFilePath := filepath.Join(siteOutputDir, "posts.html")
-			postListFile, createErr := os.Create(postListFilePath)
-			if createErr != nil {
-				fmt.Printf("Warning: Failed to create post list file %s for site %s: %v\n", postListFilePath, siteName, createErr)
-			} else {
-				// defer postListFile.Close() // Closed explicitly below
-				executeErr := parsedTemplates.ExecuteTemplate(postListFile, "base", postListData)
-				closeErr := postListFile.Close()
-
-				if executeErr != nil {
-					fmt.Printf("Warning: Failed to execute template for %s (site %s): %v\n", postListFilePath, siteName, executeErr)
-				} else if closeErr != nil {
-					fmt.Printf("Warning: Failed to close file %s (site %s): %v\n", postListFilePath, siteName, closeErr)
-				} else {
-					fmt.Printf("Successfully generated %s for site %s\n", postListFilePath, siteName)
-				}
-			}
-		}
-		// Build logic for the single site (siteName) has completed.
-		fmt.Printf("SITE BUILD FINISHED FOR: %s\n", siteName)
+	}
+	// Build logic for the single site (siteName) has completed.
+	fmt.Printf("SITE BUILD FINISHED FOR: %s\n", siteName)
 
 	// The http.Handle for "/static/" is no longer needed here,
 	// as publicFs will serve files from outputDir (e.g., "public/static/...").
@@ -203,7 +203,7 @@ func main() {
 	// targetSiteName (from CLI args) is captured by this closure.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		originalURLPath := r.URL.Path // Store for restoration
-		
+
 		// For a single-site server, the siteName is fixed (targetSiteName).
 		// The resourcePath is the path requested by the client (r.URL.Path).
 		resourcePath := r.URL.Path
@@ -264,11 +264,11 @@ func main() {
 		}
 	})
 
-	port := "8080"
+	port := ":8080"
 	// Update server startup message to reflect single site being served
 	sitePublicDirForServer := filepath.Join(sitesRootDir, targetSiteName, "public")
-	fmt.Printf("Starting server on http://localhost:%s (serving site '%s' from %s)\n", port, targetSiteName, sitePublicDirForServer)
-	serverErr := http.ListenAndServe(":"+port, nil)
+	fmt.Printf("Starting server on http://127.0.0.1%s (serving site '%s' from %s)\n", port, targetSiteName, sitePublicDirForServer)
+	serverErr := http.ListenAndServe("127.0.0.1"+port, nil)
 	if serverErr != nil {
 		panic(fmt.Sprintf("Failed to start server: %v", serverErr))
 	}

@@ -1,18 +1,15 @@
 {{define "post_list_content_block"}}
 <article>
-    <h2>All Posts</h2>
-    {{if .Posts}}
-    <ul>
-        {{range .Posts}}
-        {{$pathSegment := .Slug}}
-        {{if eq .Slug "/"}}
-            {{$pathSegment = "index"}}
-        {{end}}
-        <li><a href="/{{$pathSegment}}.html">{{.Title}}</a></li>
-        {{end}}
-    </ul>
-    {{else}}
-    <p>No posts found.</p>
+  <h2>All Posts</h2>
+  {{if .Posts}}
+  <ul>
+    {{range .Posts}} {{$pathSegment := .Slug}} {{if eq .Slug "/"}}
+    {{$pathSegment = "index"}} {{end}}
+    <li><a href="{{$pathSegment}}.html">{{.Title}}</a></li>
     {{end}}
+  </ul>
+  {{else}}
+  <p>No posts found.</p>
+  {{end}}
 </article>
 {{end}}
