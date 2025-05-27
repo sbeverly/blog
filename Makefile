@@ -1,8 +1,11 @@
-deploy-dev-blog:
+build-devblog:
+	go run cmd/main.go build devblog
+
+deploy-dev-blog: build-devblog
 	gcloud storage cp -r ./sites/devblog/public/* gs://siyan.dev
 
-# must pass name of site as arg
-devblog:
-	go run cmd/main.go
+# Serves the devblog site locally
+serve-devblog:
+	go run cmd/main.go serve devblog
 
 
