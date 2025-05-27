@@ -28,15 +28,11 @@ type PostListPageData struct {
 	Type  string       // "post_list"
 }
 
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Usage: go run cmd/main.go <site_name>")
-		os.Exit(1)
-	}
-	targetSiteName := os.Args[1]
-	fmt.Printf("STARTING SITE BUILD FOR: %s\n", targetSiteName)
+const sitesRootDirConst = "sites"
+const tmplPathConst = "templates"
 
-	sitesRootDir := "sites" // Root directory for all sites
+func buildSite(targetSiteName string, sitesRootDir string, tmplPath string) error {
+	fmt.Printf("STARTING SITE BUILD FOR: %s\n", targetSiteName)
 
 	// Use targetSiteName for the rest of the build logic
 	siteName := targetSiteName
@@ -46,15 +42,14 @@ func main() {
 	siteInfo, err := os.Stat(siteSourceDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			panic(fmt.Sprintf("Error: Site directory '%s' does not exist.", siteSourceDir))
+			return fmt.Errorf("site directory '%s' does not exist", siteSourceDir)
 		}
-		panic(fmt.Sprintf("Error: Failed to access site directory '%s': %v", siteSourceDir, err))
+		return fmt.Errorf("failed to access site directory '%s': %w", siteSourceDir, err)
 	}
 	if !siteInfo.IsDir() {
-		panic(fmt.Sprintf("Error: Path '%s' is not a directory.", siteSourceDir))
+		return fmt.Errorf("path '%s' is not a directory", siteSourceDir)
 	}
 
-	tmplPath := "templates"
 	baseTmpl := filepath.Join(tmplPath, "base.html")
 	headerTmpl := filepath.Join(tmplPath, "header.html")
 	postTmpl := filepath.Join(tmplPath, "post.html")
@@ -63,17 +58,15 @@ func main() {
 
 	parsedTemplates, err := template.ParseFiles(baseTmpl, headerTmpl, postTmpl, pageTmpl, postListTmpl)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to parse templates: %v", err))
+		return fmt.Errorf("failed to parse templates: %w", err)
 	}
 
-	// The loop over siteEntries is removed. We are processing only siteName (targetSiteName).
-	// siteName and siteSourceDir are already set.
 	siteContentDir := filepath.Join(siteSourceDir, "content")
 	siteStaticSourceDir := filepath.Join(siteSourceDir, "static")
 	siteOutputDir := filepath.Join(siteSourceDir, "public") // Output for this site
 
 	if err := os.MkdirAll(siteOutputDir, 0755); err != nil {
-		panic(fmt.Sprintf("Failed to create output directory %s for site %s: %v", siteOutputDir, siteName, err))
+		return fmt.Errorf("failed to create output directory %s for site %s: %w", siteOutputDir, siteName, err)
 	}
 
 	// Copy static assets for the site
@@ -81,7 +74,7 @@ func main() {
 	if _, err := os.Stat(siteStaticSourceDir); !os.IsNotExist(err) {
 		fmt.Printf("Copying static assets for site %s from %s to %s\n", siteName, siteStaticSourceDir, siteStaticOutputDir)
 		if err := static.CopyAll(siteStaticSourceDir, siteStaticOutputDir); err != nil {
-			panic(fmt.Sprintf("Failed to copy static assets for site %s: %v", siteName, err))
+			return fmt.Errorf("failed to copy static assets for site %s: %w", siteName, err)
 		}
 	} else {
 		fmt.Printf("Source static directory %s for site %s not found, skipping static asset copy.\n", siteStaticSourceDir, siteName)
@@ -95,7 +88,7 @@ func main() {
 	if _, err := os.Stat(postsContentPath); !os.IsNotExist(err) {
 		loadedPosts, err := posts.Load(postsContentPath)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to load posts for site %s from %s: %v", siteName, postsContentPath, err))
+			return fmt.Errorf("failed to load posts for site %s from %s: %w", siteName, postsContentPath, err)
 		}
 		for _, p := range loadedPosts {
 			renderItem := RenderItem{
@@ -116,7 +109,7 @@ func main() {
 	if _, err := os.Stat(pagesContentPath); !os.IsNotExist(err) {
 		loadedPages, err := pages.Load(pagesContentPath)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to load pages for site %s from %s: %v", siteName, pagesContentPath, err))
+			return fmt.Errorf("failed to load pages for site %s from %s: %w", siteName, pagesContentPath, err)
 		}
 		for _, p := range loadedPages {
 			allRenderItems = append(allRenderItems, RenderItem{
@@ -137,12 +130,11 @@ func main() {
 	// Generate individual post and page files for the site
 	for _, itemData := range allRenderItems {
 		fileName := strings.TrimPrefix(itemData.Slug, "/") + ".html"
-		if itemData.Slug == "/" { // This case might need review based on how slugs like "/" are generated
+		if itemData.Slug == "/" {
 			fileName = "index.html"
 		}
 		filePath := filepath.Join(siteOutputDir, fileName)
 
-		// Ensure parent directory exists for nested slugs if any
 		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 			fmt.Printf("Warning: Failed to create directory for %s: %v\n", filePath, err)
 			continue
@@ -153,8 +145,6 @@ func main() {
 			fmt.Printf("Warning: Failed to create file %s for site %s: %v\n", filePath, siteName, err)
 			continue
 		}
-
-		// defer file.Close() // Closed explicitly below to catch errors sooner in loop
 
 		executeErr := parsedTemplates.ExecuteTemplate(file, "base", itemData)
 		closeErr := file.Close()
@@ -180,7 +170,6 @@ func main() {
 		if createErr != nil {
 			fmt.Printf("Warning: Failed to create post list file %s for site %s: %v\n", postListFilePath, siteName, createErr)
 		} else {
-			// defer postListFile.Close() // Closed explicitly below
 			executeErr := parsedTemplates.ExecuteTemplate(postListFile, "base", postListData)
 			closeErr := postListFile.Close()
 
@@ -193,83 +182,101 @@ func main() {
 			}
 		}
 	}
-	// Build logic for the single site (siteName) has completed.
 	fmt.Printf("SITE BUILD FINISHED FOR: %s\n", siteName)
+	return nil
+}
 
-	// The http.Handle for "/static/" is no longer needed here,
-	// as publicFs will serve files from outputDir (e.g., "public/static/...").
-
-	// The http.HandleFunc will now serve the single site specified by targetSiteName.
-	// targetSiteName (from CLI args) is captured by this closure.
+func runServer(targetSiteName string, sitesRootDir string) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		originalURLPath := r.URL.Path // Store for restoration
+		originalURLPath := r.URL.Path
 
-		// For a single-site server, the siteName is fixed (targetSiteName).
-		// The resourcePath is the path requested by the client (r.URL.Path).
 		resourcePath := r.URL.Path
-
-		// The siteName is fixed to targetSiteName. No need to extract or validate it from the URL.
 		sitePublicRoot := filepath.Join(sitesRootDir, targetSiteName, "public")
 
-		// Check if the site's public directory exists
 		if _, err := os.Stat(sitePublicRoot); os.IsNotExist(err) {
-			http.NotFound(w, r) // Site does not exist
+			http.NotFound(w, r)
 			return
 		}
 
-		// Construct the path in the filesystem relative to the site's public directory
 		fsPathInSite := filepath.Join(sitePublicRoot, resourcePath)
 		siteFs := http.FileServer(http.Dir(sitePublicRoot))
-		r.URL.Path = resourcePath // Crucial: http.FileServer expects path relative to its root
+		r.URL.Path = resourcePath
 
-		// Check if the direct path exists (file or directory)
 		s, err := os.Stat(fsPathInSite)
 		if err == nil {
-			// If it's a directory, http.FileServer will look for index.html within it.
-			// If it's a file, http.FileServer will serve it.
 			if s.IsDir() && !strings.HasSuffix(resourcePath, "/") {
-				// Redirect to path with trailing slash for directories
 				http.Redirect(w, r, originalURLPath+"/", http.StatusMovedPermanently)
-				r.URL.Path = originalURLPath // Restore for next potential handler if redirect is not followed by client
+				r.URL.Path = originalURLPath
 				return
 			}
 			siteFs.ServeHTTP(w, r)
-			r.URL.Path = originalURLPath // Restore for next potential handler
+			r.URL.Path = originalURLPath
 			return
 		}
 
-		// If direct path doesn't exist, try with .html extension (for clean URLs like /about)
 		if os.IsNotExist(err) {
 			fsPathWithHtmlInSite := fsPathInSite + ".html"
 			sHtml, errHtml := os.Stat(fsPathWithHtmlInSite)
-			// Ensure it's a file and not a directory
 			if errHtml == nil && (sHtml != nil && !sHtml.IsDir()) {
-				// Adjust r.URL.Path for siteFs to serve the .html file
 				r.URL.Path = resourcePath + ".html"
 				siteFs.ServeHTTP(w, r)
-				r.URL.Path = originalURLPath // Restore for next potential handler
+				r.URL.Path = originalURLPath
 				return
 			}
 		}
 
-		// If neither path nor path.html exists, serve site-specific 404.html or generic 404
 		site404Path := filepath.Join(sitePublicRoot, "404.html")
-		r.URL.Path = originalURLPath // Restore before serving 404 or generic NotFound
+		r.URL.Path = originalURLPath
 		if _, statErr := os.Stat(site404Path); statErr == nil {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8") // Ensure correct content type for 404.html
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusNotFound)
-			http.ServeFile(w, r, site404Path) // Serve the site-specific 404.html
+			http.ServeFile(w, r, site404Path)
 		} else {
-			http.NotFound(w, r) // Fallback to generic Go http.NotFound
+			http.NotFound(w, r)
 		}
 	})
 
 	port := ":8080"
-	// Update server startup message to reflect single site being served
 	sitePublicDirForServer := filepath.Join(sitesRootDir, targetSiteName, "public")
 	fmt.Printf("Starting server on http://127.0.0.1%s (serving site '%s' from %s)\n", port, targetSiteName, sitePublicDirForServer)
 	serverErr := http.ListenAndServe("127.0.0.1"+port, nil)
 	if serverErr != nil {
-		panic(fmt.Sprintf("Failed to start server: %v", serverErr))
+		return fmt.Errorf("failed to start server: %w", serverErr)
+	}
+	return nil
+}
+
+func main() {
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: go run cmd/main.go <action> <site_name>")
+		fmt.Println("Actions: build, serve")
+		os.Exit(1)
+	}
+	action := os.Args[1]
+	targetSiteName := os.Args[2]
+
+	switch action {
+	case "build":
+		err := buildSite(targetSiteName, sitesRootDirConst, tmplPathConst)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error building site %s: %v\n", targetSiteName, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Site %s built successfully.\n", targetSiteName)
+	case "serve":
+		err := buildSite(targetSiteName, sitesRootDirConst, tmplPathConst)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error building site %s before serving: %v\n", targetSiteName, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Site %s built successfully. Starting server...\n", targetSiteName)
+		err = runServer(targetSiteName, sitesRootDirConst)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error running server for site %s: %v\n", targetSiteName, err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Printf("Unknown action: %s. Available actions: build, serve\n", action)
+		os.Exit(1)
 	}
 }
