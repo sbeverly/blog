@@ -1,24 +1,24 @@
 /* Basic styles for light and dark mode */
 body {
-    font-family: sans-serif;
+    font-family: monospace;
     margin: 0;
     padding: 0; /* Adjusted padding for full height flex */
     line-height: 1.6;
-    color: #333; /* Default light mode text color */
-    background-color: #f4f4f4; /* Default light mode background */
-    transition: background-color 0.3s, color 0.3s;
+    color: #000000; /* Default light mode text color */
+    background-color: #ffffff; /* Default light mode background */
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
 header {
-    background: #333;
-    color: #fff;
+    background: #ffffff;
+    color: #000000;
     padding: 1rem 20px; /* Ensure horizontal padding */
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 2px solid #000000;
 }
 
 header h3 { /* Style for the site title */
@@ -30,13 +30,17 @@ header h1 { /* Keeping existing h1 style in case it's used elsewhere, though hea
 }
 
 header nav a {
-    color: #fff;
+    color: #000000;
     margin: 0 10px;
     text-decoration: none;
+    border: 1px solid transparent; /* For consistent spacing on hover/focus */
 }
 
-header nav a:hover {
+header nav a:hover,
+header nav a:focus {
     text-decoration: underline;
+    border: 1px solid #000000; /* Pixelated "button" feel */
+    background-color: #dddddd;
 }
 
 main {
@@ -45,41 +49,54 @@ main {
 }
 
 article {
-    background: #fff; /* Light mode article background */
+    background: #ffffff; /* Light mode article background */
     padding: 20px;
     margin-bottom: 20px;
-    border-radius: 5px;
+    border: 2px solid #000000;
+    border-radius: 0; /* Sharp corners */
 }
 
 footer {
     text-align: center;
     padding: 20px; /* Adjusted padding */
-    border-top: 1px solid #ccc; /* Light mode footer border */
+    border-top: 2px solid #000000; /* Light mode footer border */
     font-size: 0.9em;
+    background-color: #ffffff;
+    color: #000000;
 }
 
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
     body {
-        color: #f4f4f4; /* Dark mode text color */
-        background-color: #333; /* Dark mode background */
+        color: #ffffff; /* Dark mode text color */
+        background-color: #000000; /* Dark mode background */
     }
 
     header {
-        background: #222; /* Dark mode header background */
-        color: #f4f4f4;
+        background: #000000; /* Dark mode header background */
+        color: #ffffff;
+        border-bottom: 2px solid #ffffff;
     }
 
     header nav a {
-        color: #f4f4f4;
+        color: #ffffff;
+    }
+
+    header nav a:hover,
+    header nav a:focus {
+        border: 1px solid #ffffff;
+        background-color: #222222;
     }
 
     article {
-        background: #444; /* Dark mode article background */
-        color: #f4f4f4;
+        background: #000000; /* Dark mode article background */
+        color: #ffffff;
+        border: 2px solid #ffffff;
     }
 
     footer {
-        border-top: 1px solid #555; /* Dark mode footer border */
+        border-top: 2px solid #ffffff; /* Dark mode footer border */
+        background-color: #000000;
+        color: #ffffff;
     }
 }
