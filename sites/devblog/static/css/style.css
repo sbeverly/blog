@@ -54,6 +54,9 @@ article {
     margin-bottom: 20px;
     border: 2px solid #000000;
     border-radius: 0; /* Sharp corners */
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 footer {
