@@ -1,106 +1,112 @@
 /* Basic styles for light and dark mode */
 body {
-    font-family: monospace;
-    margin: 0 auto; /* Center the body */
-    max-width: 960px; /* Set a max-width for the page content */
-    padding: 0; /* Adjusted padding for full height flex */
-    line-height: 1.6;
-    color: #000000; /* Default light mode text color */
-    background-color: #ffffff; /* Default light mode background */
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  font-family: monospace;
+  margin: 0 auto; /* Center the body */
+  max-width: 960px; /* Set a max-width for the page content */
+  padding: 0; /* Adjusted padding for full height flex */
+  line-height: 1.6;
+  color: #000000; /* Default light mode text color */
+  background-color: #ffffff; /* Default light mode background */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 header {
-    background: #ffffff;
-    color: #000000;
-    padding: 1rem 20px; /* Ensure horizontal padding */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  padding: 1rem 20px; /* Ensure horizontal padding */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #000000;
 }
 
-header h3 { /* Style for the site title */
-    margin: 0;
+header h3 {
+  /* Style for the site title */
+  margin: 0;
 }
 
-header h1 { /* Keeping existing h1 style in case it's used elsewhere, though header now uses h3 */
-    margin: 0;
+header h1 {
+  /* Keeping existing h1 style in case it's used elsewhere, though header now uses h3 */
+  margin: 0;
 }
 
 header nav a {
-    color: #000000;
-    margin: 0 10px;
-    text-decoration: none;
-    border: 1px solid transparent; /* For consistent spacing on hover/focus */
+  color: #000000;
+  margin: 0 10px;
+  text-decoration: none;
+  border: 1px solid transparent; /* For consistent spacing on hover/focus */
 }
 
 header nav a:hover,
 header nav a:focus {
-    text-decoration: underline;
-    border: 1px solid #000000; /* Pixelated "button" feel */
-    background-color: #dddddd;
+  text-decoration: underline;
+  border: 1px solid #000000; /* Pixelated "button" feel */
+  background-color: #dddddd;
 }
 
 main {
-    flex-grow: 1; /* Allows main to fill available space */
-    padding: 20px; /* Add padding here instead of body */
+  flex-grow: 1; /* Allows main to fill available space */
+  padding: 20px; /* Add padding here instead of body */
+}
+
+#site-logo {
+  text-decoration: none;
 }
 
 article {
-    background: #ffffff; /* Light mode article background */
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 2px solid #000000;
-    border-radius: 0; /* Sharp corners */
-    max-width: 760px;
-    margin-left: auto;
-    margin-right: auto;
+  background: #ffffff; /* Light mode article background */
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px solid #000000;
+  border-radius: 0; /* Sharp corners */
+  /* max-width: 760px; */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 footer {
-    text-align: center;
-    padding: 20px; /* Adjusted padding */
-    border-top: 2px solid #000000; /* Light mode footer border */
-    font-size: 0.9em;
-    background-color: #ffffff;
-    color: #000000;
+  text-align: center;
+  padding: 20px; /* Adjusted padding */
+  border-top: 2px solid #000000; /* Light mode footer border */
+  font-size: 0.9em;
+  background-color: #ffffff;
+  color: #000000;
 }
 
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
-    body {
-        color: #ffffff; /* Dark mode text color */
-        background-color: #000000; /* Dark mode background */
-    }
+  body {
+    color: #ffffff; /* Dark mode text color */
+    background-color: #000000; /* Dark mode background */
+  }
 
-    header {
-        background: #000000; /* Dark mode header background */
-        color: #ffffff;
-        border-bottom: 2px solid #ffffff;
-    }
+  header {
+    background: #000000; /* Dark mode header background */
+    color: #ffffff;
+    border-bottom: 2px solid #ffffff;
+  }
 
-    header nav a {
-        color: #ffffff;
-    }
+  header nav a {
+    color: #ffffff;
+  }
 
-    header nav a:hover,
-    header nav a:focus {
-        border: 1px solid #ffffff;
-        background-color: #222222;
-    }
+  header nav a:hover,
+  header nav a:focus {
+    border: 1px solid #ffffff;
+    background-color: #222222;
+  }
 
-    article {
-        background: #000000; /* Dark mode article background */
-        color: #ffffff;
-        border: 2px solid #ffffff;
-    }
+  article {
+    background: #000000; /* Dark mode article background */
+    color: #ffffff;
+    border: 2px solid #ffffff;
+  }
 
-    footer {
-        border-top: 2px solid #ffffff; /* Dark mode footer border */
-        background-color: #000000;
-        color: #ffffff;
-    }
+  footer {
+    border-top: 2px solid #ffffff; /* Dark mode footer border */
+    background-color: #000000;
+    color: #ffffff;
+  }
 }
