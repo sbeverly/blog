@@ -63,7 +63,8 @@ func buildSite(targetSiteName string, sitesRootDir string, tmplPath string) erro
 
 	siteContentDir := filepath.Join(siteSourceDir, "content")
 	siteStaticSourceDir := filepath.Join(siteSourceDir, "static")
-	siteOutputDir := filepath.Join(siteSourceDir, "public") // Output for this site
+	// siteOutputDir is now relative to the project root, not siteSourceDir
+	siteOutputDir := filepath.Join("public", siteName) // Output for this site
 
 	if err := os.MkdirAll(siteOutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory %s for site %s: %w", siteOutputDir, siteName, err)
@@ -191,7 +192,8 @@ func runServer(targetSiteName string, sitesRootDir string) error {
 		originalURLPath := r.URL.Path
 
 		resourcePath := r.URL.Path
-		sitePublicRoot := filepath.Join(sitesRootDir, targetSiteName, "public")
+		// sitePublicRoot is now relative to the project root
+		sitePublicRoot := filepath.Join("public", targetSiteName)
 
 		if _, err := os.Stat(sitePublicRoot); os.IsNotExist(err) {
 			http.NotFound(w, r)
@@ -237,7 +239,8 @@ func runServer(targetSiteName string, sitesRootDir string) error {
 	})
 
 	port := ":8080"
-	sitePublicDirForServer := filepath.Join(sitesRootDir, targetSiteName, "public")
+	// sitePublicDirForServer is now relative to the project root
+	sitePublicDirForServer := filepath.Join("public", targetSiteName)
 	fmt.Printf("Starting server on http://127.0.0.1%s (serving site '%s' from %s)\n", port, targetSiteName, sitePublicDirForServer)
 	serverErr := http.ListenAndServe("127.0.0.1"+port, nil)
 	if serverErr != nil {
