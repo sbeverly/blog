@@ -9,14 +9,14 @@ tmp_dir = "tmp"
   delay = 1000
   # for some reason, defining a folder using * glob or otherwise does not stop that dir from being included. So until this is figured out I need to
   # exclude the dir explicitly.
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "sites/devblog/public"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "public"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
   follow_symlink = false
   full_bin = ""
   include_dir = []
-  include_ext = ["go", "tpl", "tmpl", "html"]
+  include_ext = ["go", "tpl", "tmpl", "html", "css"]
   include_file = []
   kill_delay = "0s"
   log = "build-errors.log"
