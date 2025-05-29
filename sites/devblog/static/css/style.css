@@ -53,6 +53,15 @@ main {
 
 #site-logo {
   text-decoration: none;
+  color: inherit; /* Inherit color from parent, removing link-specific color */
+}
+
+#site-logo:hover,
+#site-logo:focus {
+  text-decoration: none; /* Ensure no underline on hover/focus */
+  background-color: transparent; /* Ensure no background change on hover/focus */
+  border: none; /* Ensure no border change on hover/focus */
+  color: inherit; /* Ensure color remains inherited on hover/focus */
 }
 
 article {
